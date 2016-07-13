@@ -64,10 +64,23 @@
         delete obj.value;
         break;
       case 'term':
+        obj.field = Object.keys(group[key])[0];
+        obj.value = group[key][obj.field];
+        var fieldData = fieldMap[Object.keys(group[key])[0]];
+        if (fieldData.type === 'date') {
+          obj.subType = 'equals';
+          obj.format = toIsoDateFormat(group.term.format);
+        } else {
+          obj.subType = truthy ? 'equals' : 'notEquals';
+          obj.value = group[key][obj.field];
+          if (typeof obj.value === 'number') {
+            obj.subType = 'boolean';
+          }
+        }
+        break;
       case 'terms':
         obj.field = Object.keys(group[key])[0];
         var fieldData = fieldMap[Object.keys(group[key])[0]];
-
         if (fieldData.type === 'multi') {
           var vals = group[key][obj.field];
           if (typeof vals === 'string') vals = [ vals ];
@@ -78,49 +91,48 @@
         } else {
           obj.subType = truthy ? 'equals' : 'notEquals';
           obj.value = group[key][obj.field];
-
           if (typeof obj.value === 'number') {
             obj.subType = 'boolean';
           }
         }
         break;
       case 'range':
-        var date, parts;
+        var date;
         obj.field = Object.keys(group[key])[0];
         obj.subType = Object.keys(group[key][obj.field])[0];
-
-        if (angular.isNumber(group[key][obj.field][obj.subType])) {
-          obj.value = group[key][obj.field][obj.subType];
-          break;
+        var fieldData = fieldMap[Object.keys(group[key])[0]];
+        if (fieldData.type === 'date') {
+          if (group[key][obj.field].format) {
+            for (var subType in group[key][obj.field]) {
+              if (subType !== 'format') {
+                date = group[key][obj.field][subType];
+                obj.value = date;
+              } else {
+                obj.format = toIsoDateFormat(group[key][obj.field].format);
+              }
+            }
+            break;
+          } else if (angular.isDefined(Object.keys(group[key][obj.field])[1])) {
+            date = group[key][obj.field].gte;
+            if (~date.indexOf('now-')) {
+              obj.subType = 'last';
+              obj.value = parseInt(date.split('now-')[1].split('d')[0]);
+              break;
+            }
+            if (~date.indexOf('now')) {
+              obj.subType = 'next';
+              date = group[key][obj.field].lte;
+              obj.value = parseInt(date.split('now+')[1].split('d')[0]);
+              break;
+            }
+          }
         }
-
-        if (angular.isDefined(Object.keys(group[key][obj.field])[1])) {
-          date = group[key][obj.field].gte;
-
-          if (~date.indexOf('now-')) {
-            obj.subType = 'last';
-            obj.value = parseInt(date.split('now-')[1].split('d')[0]);
+        if (fieldData.type === 'number') {
+          if (angular.isNumber(group[key][obj.field][obj.subType])) {
+            obj.value = group[key][obj.field][obj.subType];
             break;
           }
-
-          if (~date.indexOf('now')) {
-            obj.subType = 'next';
-            date = group[key][obj.field].lte;
-            obj.value = parseInt(date.split('now+')[1].split('d')[0]);
-            break;
-          }
-
-          obj.subType = 'equals';
-          parts = date.split('T')[0].split('-');
-          obj.date = parts[2] + '/' + parts[1] + '/' + parts[0];
-          break;
         }
-
-        date = group[key][obj.field][obj.subType];
-        parts = date.split('T')[0].split('-');
-        obj.date = parts[2] + '/' + parts[1] + '/' + parts[0];
-        break;
-
       case 'not':
         obj = parseQueryGroup(fieldMap, group[key].filter, false);
         break;
@@ -143,7 +155,6 @@
 
     var fieldName = group.field;
     var fieldData = fieldMap[fieldName];
-
 
     if (!fieldName) return;
 
@@ -188,21 +199,24 @@
           case 'equals':
             if (!angular.isDate(group.date)) return;
             obj.term = {};
-            obj.term[fieldName] = formatDate($filter, group.date, group.dateFormat);
+            obj.term[fieldName] = formatDate($filter, group.date, group.format);
+            obj.term.format = toEsDateFormat(group.format);
             break;
           case 'lt':
           case 'lte':
             if (!angular.isDate(group.date)) return;
             obj.range = {};
             obj.range[fieldName] = {};
-            obj.range[fieldName][group.subType] = formatDate($filter, group.date, group.dateFormat);
+            obj.range[fieldName][group.subType] = formatDate($filter, group.date, group.format);
+            obj.range[fieldName].format = toEsDateFormat(group.format);
             break;
           case 'gt':
           case 'gte':
             if (!angular.isDate(group.date)) return;
             obj.range = {};
             obj.range[fieldName] = {};
-            obj.range[fieldName][group.subType] = formatDate($filter, group.date, group.dateFormat);
+            obj.range[fieldName][group.subType] = formatDate($filter, group.date, group.format);
+            obj.range[fieldName].format = toEsDateFormat(group.format);
             break;
           case 'last':
             if (!angular.isNumber(group.value)) return;
@@ -256,6 +270,7 @@
         field: '',
         subType: '',
         value: '',
+        format: '',
       },
       number: {
         field: '',
@@ -267,10 +282,24 @@
     return angular.copy(templates[type]);
   }
 
-  function formatDate($filter, date, dateFormat) {
+  function formatDate($filter, date, format) {
     if (!angular.isDate(date)) return false;
-    var fDate = $filter('date')(date, dateFormat);
+    var fDate = $filter('date')(date, format);
     return fDate;
+  }
+
+  function toEsDateFormat(dateFormat) {
+    if (angular.isString(dateFormat)) {
+      dateFormat = dateFormat.replace(/(THH)/g, '\'T\'HH');
+    }
+    return dateFormat;
+  }
+
+  function toIsoDateFormat(dateFormat) {
+    if (angular.isString(dateFormat)) {
+      dateFormat = dateFormat.replace(/(\'T\'HH)/g, 'THH');
+    }
+    return dateFormat;
   }
 
 })(window.angular);
