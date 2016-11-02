@@ -35,7 +35,7 @@ gulp.task('default', ['uglify']);
 
 
 gulp.task('clean', function(done) {
-  del('./dist', done);
+  del('./dist/*', done);
 });
 
 gulp.task('concat', [ 'templatecache' ], function() {

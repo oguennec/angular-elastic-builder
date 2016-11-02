@@ -168,12 +168,12 @@
           case 'boolean':
             if (group.value === undefined) return;
             obj.term = {};
-            obj.term[fieldName] = group.value;
+            obj.term[fieldName] = group.value.toString().toLowerCase();
             break;
           case 'notEquals':
             if (group.value === undefined) return;
             obj.not = { filter: { term: {}}};
-            obj.not.filter.term[fieldName] = group.value;
+            obj.not.filter.term[fieldName] = group.value.toString().toLowerCase();
             break;
           case 'exists':
             obj.exists = { field: fieldName };

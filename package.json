@@ -1,6 +1,6 @@
 {
   "name": "angular-elastic-builder-oguennec",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "description": "Angular Module for building an Elasticsearch Query",
   "author": "Dan Crews <crewsd@gmail.com>",
   "contributors": [{

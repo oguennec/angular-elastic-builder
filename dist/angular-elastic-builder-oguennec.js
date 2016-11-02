@@ -1,9 +1,9 @@
 /**
- * # angular-elastic-builder
+ * # angular-elastic-builder-oguennec
  * ## Angular Module for building an Elasticsearch Query
  *
- * @version v1.5.0
- * @link https://github.com/dncrews/angular-elastic-builder.git
+ * @version v1.5.7
+ * @link https://github.com/oguennec/angular-elastic-builder.git
  * @license MIT
  * @author Dan Crews <crewsd@gmail.com>
  */
@@ -594,12 +594,12 @@
           case 'boolean':
             if (group.value === undefined) return;
             obj.term = {};
-            obj.term[fieldName] = group.value;
+            obj.term[fieldName] = group.value.toString().toLowerCase();
             break;
           case 'notEquals':
             if (group.value === undefined) return;
             obj.not = { filter: { term: {}}};
-            obj.not.filter.term[fieldName] = group.value;
+            obj.not.filter.term[fieldName] = group.value.toString().toLowerCase();
             break;
           case 'exists':
             obj.exists = { field: fieldName };
